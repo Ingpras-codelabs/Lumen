@@ -111,6 +111,8 @@ class MainActivity : ComponentActivity() {
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
             onShare = { file -> shareCurrentFile(file) },
+            onReturnHome = { viewModel.clear() },
+            onExit = { finish() },
             modifier = Modifier,
         )
     }

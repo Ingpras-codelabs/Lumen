@@ -1,5 +1,6 @@
 package com.offlineviewer.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,11 +34,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
+import com.offlineviewer.app.R
 import com.offlineviewer.app.render.LoadedFile
 import com.offlineviewer.app.ui.components.EmptyState
 import com.offlineviewer.app.ui.components.ErrorState
@@ -59,6 +62,8 @@ fun ViewerScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     onShare: (LoadedFile) -> Unit,
+    onReturnHome: () -> Unit,
+    onExit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val content = state as? ViewerUiState.Content
@@ -68,6 +73,20 @@ fun ViewerScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var showDetails by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    // System back handling. The two handlers' enabled flags are exact
+    // complements (see BackNavigation), so precisely one intercepts back for
+    // any given state. When a file/error/load is on screen, back closes it and
+    // returns home; at the root (Empty) back asks before leaving the app. The
+    // SAF picker and share sheet run in their own activities, so neither is
+    // affected by these handlers.
+    BackHandler(enabled = BackNavigation.shouldReturnHome(state)) {
+        onReturnHome()
+    }
+    BackHandler(enabled = BackNavigation.shouldConfirmExit(state)) {
+        showExitDialog = true
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -158,6 +177,35 @@ fun ViewerScreen(
             onDismiss = { showThemeDialog = false },
         )
     }
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            onConfirm = { showExitDialog = false; onExit() },
+            onDismiss = { showExitDialog = false },
+        )
+    }
+}
+
+/**
+ * Confirms leaving the app when back is pressed at the home state. Cancel
+ * keeps the app open; Exit lets the hosting activity finish. Follows the same
+ * confirm/dismiss TextButton layout as the other dialogs on this screen.
+ */
+@Composable
+private fun ExitConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.exit_dialog_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.exit_dialog_cancel)) }
+        },
+        title = { Text(stringResource(R.string.exit_dialog_title)) },
+        text = { Text(stringResource(R.string.exit_dialog_message)) },
+    )
 }
 
 /** Shows the detected MIME type, extension, and human-readable size. */

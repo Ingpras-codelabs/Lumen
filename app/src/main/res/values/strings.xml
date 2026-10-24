@@ -2,4 +2,8 @@
 <resources>
     <string name="app_name">Lumen</string>
     <string name="share_file">Share file</string>
+    <string name="exit_dialog_title">Exit Lumen?</string>
+    <string name="exit_dialog_message">Are you sure you want to close Lumen?</string>
+    <string name="exit_dialog_confirm">Exit</string>
+    <string name="exit_dialog_cancel">Cancel</string>
 </resources>
