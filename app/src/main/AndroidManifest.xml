@@ -46,6 +46,11 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/java-archive" />
+                <data android:mimeType="application/x-tar" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="image/webp" />
                 <data android:mimeType="image/bmp" />
                 <data android:mimeType="image/gif" />
@@ -53,6 +58,9 @@
                 <data android:mimeType="image/vnd.microsoft.icon" />
                 <data android:mimeType="image/png" />
                 <data android:mimeType="image/jpeg" />
+                <data android:mimeType="image/vnd.wap.wbmp" />
+                <data android:mimeType="image/heif" />
+                <data android:mimeType="image/heic" />
             </intent-filter>
 
             <!-- Appear in "Open with" by file extension when the MIME type is
@@ -83,10 +91,18 @@
                 <data android:pathPattern=".*\\.docx" />
                 <data android:pathPattern=".*\\.xlsx" />
                 <data android:pathPattern=".*\\.pptx" />
+                <data android:pathPattern=".*\\.zip" />
+                <data android:pathPattern=".*\\.jar" />
+                <data android:pathPattern=".*\\.tar" />
+                <data android:pathPattern=".*\\.gz" />
+                <data android:pathPattern=".*\\.tgz" />
                 <data android:pathPattern=".*\\.webp" />
                 <data android:pathPattern=".*\\.bmp" />
                 <data android:pathPattern=".*\\.gif" />
                 <data android:pathPattern=".*\\.ico" />
+                <data android:pathPattern=".*\\.wbmp" />
+                <data android:pathPattern=".*\\.heif" />
+                <data android:pathPattern=".*\\.heic" />
                 <data android:pathPattern=".*\\.kt" />
                 <data android:pathPattern=".*\\.kts" />
                 <data android:pathPattern=".*\\.java" />
@@ -105,9 +121,26 @@
                 <data android:pathPattern=".*\\.sh" />
                 <data android:pathPattern=".*\\.sql" />
                 <data android:pathPattern=".*\\.css" />
+                <data android:pathPattern=".*\\.scss" />
+                <data android:pathPattern=".*\\.less" />
                 <data android:pathPattern=".*\\.toml" />
                 <data android:pathPattern=".*\\.ini" />
+                <data android:pathPattern=".*\\.cfg" />
+                <data android:pathPattern=".*\\.conf" />
+                <data android:pathPattern=".*\\.env" />
                 <data android:pathPattern=".*\\.properties" />
+                <data android:pathPattern=".*\\.scala" />
+                <data android:pathPattern=".*\\.dart" />
+                <data android:pathPattern=".*\\.lua" />
+                <data android:pathPattern=".*\\.pl" />
+                <data android:pathPattern=".*\\.r" />
+                <data android:pathPattern=".*\\.groovy" />
+                <data android:pathPattern=".*\\.gradle" />
+                <data android:pathPattern=".*\\.ps1" />
+                <data android:pathPattern=".*\\.bat" />
+                <data android:pathPattern=".*\\.cmd" />
+                <data android:pathPattern=".*\\.bash" />
+                <data android:pathPattern=".*\\.zsh" />
             </intent-filter>
 
             <!-- Receive shared files from the share sheet (SEND). -->
@@ -134,6 +167,11 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/java-archive" />
+                <data android:mimeType="application/x-tar" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-gzip" />
                 <data android:mimeType="image/webp" />
                 <data android:mimeType="image/bmp" />
                 <data android:mimeType="image/gif" />
@@ -141,6 +179,9 @@
                 <data android:mimeType="image/vnd.microsoft.icon" />
                 <data android:mimeType="image/png" />
                 <data android:mimeType="image/jpeg" />
+                <data android:mimeType="image/vnd.wap.wbmp" />
+                <data android:mimeType="image/heif" />
+                <data android:mimeType="image/heic" />
             </intent-filter>
         </activity>
 

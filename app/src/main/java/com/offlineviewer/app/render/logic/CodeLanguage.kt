@@ -28,6 +28,14 @@ enum class CodeLanguage(
     TOML("TOML", setOf("true", "false"), "#"),
     INI("INI", emptySet(), ";"),
     PROPERTIES("Properties", emptySet(), "#"),
+    SCALA("Scala", setOf("def", "val", "var", "class", "object", "trait", "extends", "with", "import", "package", "if", "else", "for", "while", "match", "case", "return", "new", "null", "true", "false", "this", "override", "sealed"), "//"),
+    DART("Dart", setOf("class", "void", "int", "double", "String", "bool", "var", "final", "const", "return", "if", "else", "for", "while", "import", "export", "new", "null", "true", "false", "this", "async", "await", "extends", "implements"), "//"),
+    LUA("Lua", setOf("function", "local", "end", "if", "then", "else", "elseif", "for", "while", "do", "return", "nil", "true", "false", "and", "or", "not", "in", "repeat", "until"), "--"),
+    PERL("Perl", setOf("sub", "my", "our", "local", "use", "require", "if", "else", "elsif", "unless", "while", "for", "foreach", "return", "package", "undef"), "#"),
+    R("R", setOf("function", "if", "else", "for", "while", "repeat", "return", "in", "next", "break", "TRUE", "FALSE", "NULL", "NA", "library", "require"), "#"),
+    GROOVY("Groovy", setOf("def", "class", "void", "int", "return", "if", "else", "for", "while", "import", "package", "new", "null", "true", "false", "this", "static", "final"), "//"),
+    POWERSHELL("PowerShell", setOf("function", "param", "if", "else", "elseif", "foreach", "for", "while", "return", "switch", "try", "catch", "finally", "begin", "process", "end"), "#"),
+    BATCH("Batch", setOf("echo", "set", "if", "else", "for", "goto", "call", "exit", "rem"), "::"),
     PLAIN("Code", emptySet(), null);
 
     companion object {
@@ -45,12 +53,20 @@ enum class CodeLanguage(
             "rb" to RUBY,
             "php" to PHP,
             "swift" to SWIFT,
-            "sh" to SHELL, "bash" to SHELL,
+            "sh" to SHELL, "bash" to SHELL, "zsh" to SHELL,
             "sql" to SQL,
-            "css" to CSS,
+            "css" to CSS, "scss" to CSS, "less" to CSS,
             "toml" to TOML,
-            "ini" to INI, "cfg" to INI,
+            "ini" to INI, "cfg" to INI, "conf" to INI, "env" to INI,
             "properties" to PROPERTIES,
+            "scala" to SCALA, "sc" to SCALA,
+            "dart" to DART,
+            "lua" to LUA,
+            "pl" to PERL, "pm" to PERL,
+            "r" to R,
+            "groovy" to GROOVY, "gradle" to GROOVY,
+            "ps1" to POWERSHELL,
+            "bat" to BATCH, "cmd" to BATCH,
         )
 
         /** All source-code extensions this renderer claims. */

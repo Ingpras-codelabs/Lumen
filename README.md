@@ -4,7 +4,9 @@ Lumen (an offline file viewer) is a completely free, fully offline native Androi
 app (Kotlin + Jetpack Compose + Material 3) that renders file formats Android does
 not preview natively. It prioritizes SVG and Markdown and also handles a broad
 curated set: plain text/log, JSON, XML, YAML, CSV, TSV, HTML, RTF, EPUB, source
-code with syntax highlighting, and extra image types (webp, bmp, gif, ico). Every
+code with syntax highlighting, archive listings (zip, jar, tar, gz/tgz), and
+extra image types (webp, bmp, gif, ico, wbmp, and heif/heic on supported
+devices). Every
 format is rendered by a pluggable renderer and, when a file matches nothing
 specific, it falls back to a readable plain-text view so no file is ever left
 unhandled.
@@ -82,8 +84,9 @@ permissively licensed (Apache License 2.0).
 | HTML                  | `.html`, `.htm`                                                            | `text/html`                                                               | Built-in WebView, JS disabled and network blocked                | n/a        |
 | RTF                   | `.rtf`                                                                     | `application/rtf`, `text/rtf`                                              | Custom RTF control-word converter to styled text                 | n/a        |
 | EPUB                  | `.epub`                                                                    | `application/epub+zip`                                                     | `java.util.zip` + OPF spine parse; chapters in offline WebView   | n/a        |
-| Source code           | `.kt`, `.kts`, `.java`, `.js`, `.mjs`, `.jsx`, `.ts`, `.tsx`, `.py`, `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.cs`, `.go`, `.rb`, `.rs`, `.php`, `.swift`, `.sh`, `.bash`, `.sql`, `.css`, `.toml`, `.ini`, `.cfg`, `.properties` | `text/x-java`, `text/x-kotlin`, `text/x-python`, `application/javascript`, `application/x-sh`, `text/x-csrc`, `text/x-c++src` | Built-in regex syntax highlighter (per-language), monospace view | n/a        |
-| Images                | `.webp`, `.bmp`, `.gif`, `.ico`, `.png`, `.jpg`, `.jpeg`                   | `image/webp`, `image/bmp`, `image/gif`, `image/x-icon`, `image/vnd.microsoft.icon`, `image/png`, `image/jpeg` | Android `BitmapFactory` decoders + Compose zoom/pan              | n/a        |
+| Source code / config  | `.kt`, `.kts`, `.java`, `.js`, `.mjs`, `.jsx`, `.ts`, `.tsx`, `.py`, `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.cs`, `.go`, `.rb`, `.rs`, `.php`, `.swift`, `.sh`, `.bash`, `.zsh`, `.sql`, `.css`, `.scss`, `.less`, `.toml`, `.ini`, `.cfg`, `.conf`, `.env`, `.properties`, `.scala`, `.sc`, `.dart`, `.lua`, `.pl`, `.pm`, `.r`, `.groovy`, `.gradle`, `.ps1`, `.bat`, `.cmd` | `text/x-java`, `text/x-kotlin`, `text/x-python`, `application/javascript`, `application/x-sh`, `text/x-csrc`, `text/x-c++src` | Built-in regex syntax highlighter (per-language), monospace view | n/a        |
+| Archives (listing)    | `.zip`, `.jar`, `.tar`, `.gz`, `.tgz`                                      | `application/zip`, `application/java-archive`, `application/x-tar`, `application/gzip`, `application/x-gzip` | `java.util.zip` (ZipInputStream/GZIPInputStream) + minimal ustar tar reader; lists entries and sizes, does not extract | n/a        |
+| Images                | `.webp`, `.bmp`, `.gif`, `.ico`, `.png`, `.jpg`, `.jpeg`, `.wbmp`, `.heif`, `.heic` | `image/webp`, `image/bmp`, `image/gif`, `image/x-icon`, `image/vnd.microsoft.icon`, `image/png`, `image/jpeg`, `image/vnd.wap.wbmp`, `image/heif`, `image/heic` | Android `BitmapFactory` decoders (+ `ImageDecoder` for heif/heic on API 28+) + Compose zoom/pan | n/a        |
 
 Notes:
 
@@ -94,6 +97,13 @@ Notes:
   tested on the JVM, where the `android.jar` stub of `org.json` throws.
 - GIF renders as a static first frame; ICO support is basic. SVG is intentionally
   routed to the SVG renderer rather than the raster image renderer.
+- HEIF/HEIC decode uses the platform `ImageDecoder`, which is only available from
+  API 28; on older devices a HEIF/HEIC file degrades to a clear error state. TIFF
+  and AVIF are deliberately NOT advertised because the platform decoders do not
+  handle them reliably across the supported API range (minSdk 21 to targetSdk 34).
+- Archives are shown as a read-only table of contents (entry names, sizes, and
+  counts); contents are listed, not extracted. Listings are capped for very large
+  archives and malformed archives degrade gracefully to a partial or empty view.
 - The exact dependency versions above are read from
   [`gradle/libs.versions.toml`](gradle/libs.versions.toml):
   AndroidSVG `1.4`, Markwon `4.6.2`, SnakeYAML `2.3`, `org.json` `20240303` (test

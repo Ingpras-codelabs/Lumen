@@ -43,17 +43,27 @@ object SupportedFormats {
             listOf("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
         ),
         Format(
+            "Archive",
+            listOf("zip", "jar", "tar", "gz", "tgz"),
+            listOf("application/zip", "application/java-archive", "application/x-tar", "application/gzip", "application/x-gzip"),
+        ),
+        Format(
             "Image",
-            listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg"),
-            listOf("image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon", "image/png", "image/jpeg"),
+            listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg", "wbmp", "heif", "heic"),
+            listOf(
+                "image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon",
+                "image/png", "image/jpeg", "image/vnd.wap.wbmp", "image/heif", "image/heic",
+            ),
         ),
         Format(
             "Source code",
             listOf(
                 "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
                 "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
-                "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
-                "cfg", "properties",
+                "php", "swift", "sh", "bash", "zsh", "sql", "css", "scss", "less",
+                "toml", "ini", "cfg", "conf", "env", "properties",
+                "scala", "sc", "dart", "lua", "pl", "pm", "r", "groovy", "gradle",
+                "ps1", "bat", "cmd",
             ),
             listOf("text/x-java", "text/x-kotlin", "text/x-python", "application/javascript", "application/x-sh", "text/x-csrc", "text/x-c++src"),
         ),
@@ -66,15 +76,18 @@ object SupportedFormats {
     val allMimeTypes: Set<String> = all.flatMap { it.mimeTypes }.toSet()
 
     /**
-     * Extensions that are safe to always decode as UTF-8 text. Binary-ish
-     * container formats (epub) are excluded so they are read as raw bytes.
+     * Extensions that are safe to always decode as UTF-8 text. Binary container
+     * formats (epub, the OOXML Office formats, archives) and binary image types
+     * (including wbmp/heif/heic) are excluded so they are read as raw bytes.
      */
     val textExtensions: Set<String> = setOf(
         "svg", "md", "markdown", "csv", "tsv", "json", "xml",
         "yaml", "yml", "txt", "log", "html", "htm", "rtf",
         "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
         "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
-        "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
-        "cfg", "properties",
+        "php", "swift", "sh", "bash", "zsh", "sql", "css", "scss", "less",
+        "toml", "ini", "cfg", "conf", "env", "properties",
+        "scala", "sc", "dart", "lua", "pl", "pm", "r", "groovy", "gradle",
+        "ps1", "bat", "cmd",
     )
 }

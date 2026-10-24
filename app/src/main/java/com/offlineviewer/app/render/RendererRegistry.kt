@@ -68,6 +68,7 @@ class RendererRegistry(
                     DocxRenderer(),           // Word OOXML (content extraction)
                     XlsxRenderer(),           // Excel OOXML (content extraction)
                     PptxRenderer(),           // PowerPoint OOXML (content extraction)
+                    ArchiveRenderer(),        // zip/jar/tar/gz/tgz (entry listing)
                     SourceCodeRenderer(),
                     ImageRenderer(),          // webp/bmp/gif/ico/png/jpeg
                     plainText,                // text/plain + explicit text extensions
