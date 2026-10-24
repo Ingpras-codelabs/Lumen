@@ -92,4 +92,33 @@ class RendererRegistryTest {
         assertEquals("Plain text", reg.resolve("application/weird", "weird").formatName)
         assertTrue(reg.fallback is PlainTextRenderer)
     }
+
+    /**
+     * Locks the documented invariant (see [RendererRegistry.createDefault]):
+     * because SVG is an image type, [SvgRenderer] MUST resolve ahead of the
+     * raster [ImageRenderer] for both the `image/svg+xml` MIME type AND the
+     * `.svg` extension. The extension case is load-bearing on list order, so a
+     * future reorder that put ImageRenderer first would silently route SVGs to
+     * the raster decoder; this test fails loudly if that happens.
+     */
+    @Test
+    fun svgResolvesAheadOfImageRendererForSvgMimeAndExtension() {
+        val reg = RendererRegistry.createDefault()
+
+        val byMime = reg.resolve("image/svg+xml", null)
+        assertTrue(
+            "image/svg+xml must resolve to SvgRenderer, not ImageRenderer (got ${byMime.formatName})",
+            byMime is SvgRenderer,
+        )
+
+        val byExtension = reg.resolve(null, "svg")
+        assertTrue(
+            ".svg must resolve to SvgRenderer, not ImageRenderer (got ${byExtension.formatName})",
+            byExtension is SvgRenderer,
+        )
+
+        // Guard against a renderer that claims both: ensure it is NOT the raster one.
+        assertTrue("image/svg+xml must not route to ImageRenderer", byMime !is ImageRenderer)
+        assertTrue(".svg must not route to ImageRenderer", byExtension !is ImageRenderer)
+    }
 }

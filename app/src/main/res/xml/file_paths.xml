@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Paths the FileProvider is allowed to share. "shared" maps to a
+  cache/shared/ subdirectory holding app-private copies of the currently open
+  file, created at share time. Nothing outside the app sandbox is exposed.
+-->
+<paths>
+    <cache-path
+        name="shared"
+        path="shared/" />
+</paths>

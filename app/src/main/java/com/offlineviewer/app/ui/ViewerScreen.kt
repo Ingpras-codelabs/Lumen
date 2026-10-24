@@ -58,7 +58,7 @@ fun ViewerScreen(
     windowSizeClass: WindowSizeClass,
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onShare: () -> Unit,
+    onShare: (LoadedFile) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val content = state as? ViewerUiState.Content
@@ -104,7 +104,7 @@ fun ViewerScreen(
                         if (content != null) {
                             DropdownMenuItem(
                                 text = { Text("Share") },
-                                onClick = { menuExpanded = false; onShare() },
+                                onClick = { menuExpanded = false; onShare(content.file) },
                                 leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
                             )
                             DropdownMenuItem(

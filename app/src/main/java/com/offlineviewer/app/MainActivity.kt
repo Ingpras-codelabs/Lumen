@@ -19,14 +19,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offlineviewer.app.data.FileLoader
 import com.offlineviewer.app.data.ThemePreferences
+import com.offlineviewer.app.render.LoadedFile
 import com.offlineviewer.app.ui.ViewerScreen
 import com.offlineviewer.app.ui.ViewerViewModel
 import com.offlineviewer.app.ui.theme.AppTheme
+import java.io.File
 
 /**
  * Single activity. Hosts the Compose UI, wires the Storage Access Framework
@@ -107,7 +110,7 @@ class MainActivity : ComponentActivity() {
             windowSizeClass = windowSizeClass,
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
-            onShare = { shareCurrentFile(viewModel.currentUri) },
+            onShare = { file -> shareCurrentFile(file) },
             modifier = Modifier,
         )
     }
@@ -119,21 +122,45 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Shares the currently-open file via the system share sheet. Fully local:
-     * the Uri is a content:// reference already granted to this app; no network
-     * access is involved.
+     * Shares the currently-open file via the system share sheet. Fully local
+     * and offline: the already-loaded bytes are written to an app-private file
+     * under cache/shared/ and exposed through our own [FileProvider], so the
+     * share sheet receives a content:// URI this app actually owns and can
+     * grant read access to. The original SAF URI came from a foreign provider
+     * and could not be legally re-granted, so we never forward it.
+     *
+     * If the file's bytes cannot be materialised (nothing to copy), the share
+     * is silently skipped; the Share menu entry is only shown when a file is
+     * loaded, so this is the defensive last line rather than the common path.
      */
-    private fun shareCurrentFile(uri: Uri?) {
-        if (uri == null) return
+    private fun shareCurrentFile(file: LoadedFile) {
         runCatching {
-            val mime = contentResolver.getType(uri) ?: "*/*"
+            val bytes = file.bytes ?: file.text?.toByteArray(FileLoader.DEFAULT_CHARSET) ?: return
+            val sharedDir = File(cacheDir, "shared").apply { mkdirs() }
+            // Reuse a single slot so cached copies do not accumulate.
+            sharedDir.listFiles()?.forEach { it.delete() }
+            val outFile = File(sharedDir, sanitizeFileName(file.displayName))
+            outFile.writeBytes(bytes)
+
+            val shareUri = FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                outFile,
+            )
+            val mime = file.mimeType?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
             val share = Intent(Intent.ACTION_SEND).apply {
                 type = mime
-                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_STREAM, shareUri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             startActivity(Intent.createChooser(share, getString(R.string.share_file)))
         }
+    }
+
+    /** Strips path separators so the display name is safe as a file name. */
+    private fun sanitizeFileName(name: String): String {
+        val cleaned = name.substringAfterLast('/').substringAfterLast('\\').trim()
+        return cleaned.ifBlank { "shared-file" }
     }
 
     /** Pulls a content/file Uri out of a VIEW or SEND intent, if present. */
