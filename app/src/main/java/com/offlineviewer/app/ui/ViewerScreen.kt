@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -25,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,11 +43,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import com.offlineviewer.app.R
+import com.offlineviewer.app.data.RecentFilesLogic
 import com.offlineviewer.app.render.LoadedFile
 import com.offlineviewer.app.ui.components.EmptyState
 import com.offlineviewer.app.ui.components.ErrorState
 import com.offlineviewer.app.ui.components.LoadingState
+import com.offlineviewer.app.ui.components.TextFindView
 import com.offlineviewer.app.ui.theme.ThemeMode
 
 /**
@@ -64,6 +71,8 @@ fun ViewerScreen(
     onShare: (LoadedFile) -> Unit,
     onReturnHome: () -> Unit,
     onExit: () -> Unit,
+    recentFiles: List<RecentFilesLogic.Entry> = emptyList(),
+    onOpenRecent: (RecentFilesLogic.Entry) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val content = state as? ViewerUiState.Content
@@ -74,6 +83,15 @@ fun ViewerScreen(
     var showDetails by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var findActive by remember { mutableStateOf(false) }
+
+    val clipboard = LocalClipboardManager.current
+    // Text-based content exposes a decoded text payload; those renderers
+    // (plain text / source code / structured data) support in-document find
+    // and copy-all. Binary content (images, archives, Office) does not.
+    val searchableText = content?.file?.text
+    // A new file resets the find view so it never lingers across documents.
+    LaunchedEffect(content?.file) { findActive = false }
 
     // System back handling. The two handlers' enabled flags are exact
     // complements (see BackNavigation), so precisely one intercepts back for
@@ -86,6 +104,11 @@ fun ViewerScreen(
     }
     BackHandler(enabled = BackNavigation.shouldConfirmExit(state)) {
         showExitDialog = true
+    }
+    // While the in-document find view is open, back closes it first (it is
+    // registered last so it takes precedence over the return-home handler).
+    BackHandler(enabled = findActive) {
+        findActive = false
     }
 
     Scaffold(
@@ -110,6 +133,11 @@ fun ViewerScreen(
                     }
                 },
                 actions = {
+                    if (searchableText != null) {
+                        IconButton(onClick = { findActive = !findActive }) {
+                            Icon(Icons.Filled.Search, contentDescription = "Find in file")
+                        }
+                    }
                     IconButton(onClick = onOpenFile) {
                         Icon(Icons.Filled.FolderOpen, contentDescription = "Open a file")
                     }
@@ -130,6 +158,21 @@ fun ViewerScreen(
                                 text = { Text("File details") },
                                 onClick = { menuExpanded = false; showDetails = true },
                                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            )
+                        }
+                        if (searchableText != null) {
+                            DropdownMenuItem(
+                                text = { Text("Find in file") },
+                                onClick = { menuExpanded = false; findActive = true },
+                                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Copy all text") },
+                                onClick = {
+                                    menuExpanded = false
+                                    clipboard.setText(AnnotatedString(searchableText))
+                                },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
                             )
                         }
                         DropdownMenuItem(
@@ -160,10 +203,24 @@ fun ViewerScreen(
             .padding(horizontal = horizontalPadding)
 
         when (state) {
-            is ViewerUiState.Empty -> EmptyState(onOpenFile = onOpenFile, modifier = contentModifier)
+            is ViewerUiState.Empty -> EmptyState(
+                onOpenFile = onOpenFile,
+                recentFiles = recentFiles,
+                onOpenRecent = onOpenRecent,
+                modifier = contentModifier,
+            )
             is ViewerUiState.Loading -> LoadingState(contentModifier)
             is ViewerUiState.Error -> ErrorState(state.message, onOpenFile, contentModifier)
-            is ViewerUiState.Content -> state.renderer.Render(state.file, contentModifier)
+            is ViewerUiState.Content ->
+                if (findActive && searchableText != null) {
+                    TextFindView(
+                        text = searchableText,
+                        onClose = { findActive = false },
+                        modifier = contentModifier,
+                    )
+                } else {
+                    state.renderer.Render(state.file, contentModifier)
+                }
         }
     }
 

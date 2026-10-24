@@ -3,13 +3,19 @@
 Lumen (an offline file viewer) is a completely free, fully offline native Android
 app (Kotlin + Jetpack Compose + Material 3) that renders file formats Android does
 not preview natively. It prioritizes SVG and Markdown and also handles a broad
-curated set: plain text/log, JSON, XML, YAML, CSV, TSV, HTML, RTF, EPUB, source
-code with syntax highlighting, archive listings (zip, jar, tar, gz/tgz), and
-extra image types (webp, bmp, gif, ico, wbmp, and heif/heic on supported
-devices). Every
-format is rendered by a pluggable renderer and, when a file matches nothing
-specific, it falls back to a readable plain-text view so no file is ever left
-unhandled.
+curated set: plain text/log, JSON, XML, YAML, CSV, TSV, HTML, RTF, EPUB, Office
+documents via content extraction (Word `.docx`, Excel `.xlsx`, PowerPoint
+`.pptx`), source code with syntax highlighting, archive listings (zip, jar, tar,
+gz/tgz), and extra image types (webp, bmp, gif, ico, wbmp, and heif/heic on
+supported devices). Every format is rendered by a pluggable renderer and, when a
+file matches nothing specific, it falls back to a readable hex + text preview so
+no file is ever left unhandled.
+
+Beyond raw format coverage, Lumen adds the conveniences you expect from a daily
+viewer: predictable system-back navigation with a confirm-before-exit prompt, a
+locally remembered list of recently opened files for one-tap reopening, a
+searchable and categorized list of supported formats on the home screen, and an
+in-document find (with copy-all) for text, source, and structured files.
 
 Lumen is free and open source software (FOSS), released under the MIT License and
 built by Ingpras Codelabs. It is completely free for everyone: no ads, no
@@ -84,6 +90,9 @@ permissively licensed (Apache License 2.0).
 | HTML                  | `.html`, `.htm`                                                            | `text/html`                                                               | Built-in WebView, JS disabled and network blocked                | n/a        |
 | RTF                   | `.rtf`                                                                     | `application/rtf`, `text/rtf`                                              | Custom RTF control-word converter to styled text                 | n/a        |
 | EPUB                  | `.epub`                                                                    | `application/epub+zip`                                                     | `java.util.zip` + OPF spine parse; chapters in offline WebView   | n/a        |
+| Word document         | `.docx`                                                                    | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`  | `java.util.zip` + custom OOXML XML scan of `word/document.xml`; paragraphs/headings/tables as styled scrollable text (content extraction) | n/a        |
+| Spreadsheet           | `.xlsx`                                                                    | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`        | `java.util.zip` + custom OOXML XML scan of `xl/sharedStrings.xml` + worksheets; each sheet in the scrollable table UI (content extraction) | n/a        |
+| Presentation          | `.pptx`                                                                    | `application/vnd.openxmlformats-officedocument.presentationml.presentation` | `java.util.zip` + custom OOXML XML scan of `ppt/slides/slideN.xml`; per-slide text in slide order (content extraction) | n/a        |
 | Source code / config  | `.kt`, `.kts`, `.java`, `.js`, `.mjs`, `.jsx`, `.ts`, `.tsx`, `.py`, `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.cs`, `.go`, `.rb`, `.rs`, `.php`, `.swift`, `.sh`, `.bash`, `.zsh`, `.sql`, `.css`, `.scss`, `.less`, `.toml`, `.ini`, `.cfg`, `.conf`, `.env`, `.properties`, `.scala`, `.sc`, `.dart`, `.lua`, `.pl`, `.pm`, `.r`, `.groovy`, `.gradle`, `.ps1`, `.bat`, `.cmd` | `text/x-java`, `text/x-kotlin`, `text/x-python`, `application/javascript`, `application/x-sh`, `text/x-csrc`, `text/x-c++src` | Built-in regex syntax highlighter (per-language), monospace view | n/a        |
 | Archives (listing)    | `.zip`, `.jar`, `.tar`, `.gz`, `.tgz`                                      | `application/zip`, `application/java-archive`, `application/x-tar`, `application/gzip`, `application/x-gzip` | `java.util.zip` (ZipInputStream/GZIPInputStream) + minimal ustar tar reader; lists entries and sizes, does not extract | n/a        |
 | Images                | `.webp`, `.bmp`, `.gif`, `.ico`, `.png`, `.jpg`, `.jpeg`, `.wbmp`, `.heif`, `.heic` | `image/webp`, `image/bmp`, `image/gif`, `image/x-icon`, `image/vnd.microsoft.icon`, `image/png`, `image/jpeg`, `image/vnd.wap.wbmp`, `image/heif`, `image/heic` | Android `BitmapFactory` decoders (+ `ImageDecoder` for heif/heic on API 28+) + Compose zoom/pan | n/a        |
@@ -104,6 +113,25 @@ Notes:
 - Archives are shown as a read-only table of contents (entry names, sizes, and
   counts); contents are listed, not extracted. Listings are capped for very large
   archives and malformed archives degrade gracefully to a partial or empty view.
+- Office support (`.docx`, `.xlsx`, `.pptx`) is **content extraction, not
+  pixel-perfect rendering**. Readable text, table cells, and slide text are
+  recovered from the OOXML parts, but original fonts, images, charts, shapes,
+  cell styling, exact positioning, and animations are **not** reproduced; `.xlsx`
+  shows the cached cell values stored in the file, not recomputed formulas. A
+  malformed or empty Office archive degrades to a clear error state.
+- Legacy binary Office formats (`.doc`, `.xls`, `.ppt`, the pre-2007 OLE2
+  compound files) are **not** decoded. There is no permissive, fully-offline,
+  high-fidelity decoder for them under this project's license constraints, so
+  they are not advertised and instead fall through to the universal hex + text
+  fallback rather than overclaiming support.
+- TIFF and AVIF images are deliberately omitted: the Android platform decoders
+  do not handle TIFF reliably across the supported API range, and AVIF decode is
+  only available on API 31+ and is device/codec dependent, so neither can be
+  promised honestly on minSdk 21 to targetSdk 34.
+- No third-party runtime dependency was added for Office, archive, recent-files,
+  or in-document search support. All of that logic is implemented directly in
+  this project on top of `java.util.zip` and the Android platform, so the runtime
+  dependency set is unchanged from before these features.
 - The exact dependency versions above are read from
   [`gradle/libs.versions.toml`](gradle/libs.versions.toml):
   AndroidSVG `1.4`, Markwon `4.6.2`, SnakeYAML `2.3`, `org.json` `20240303` (test
@@ -176,14 +204,52 @@ truth for the advertised format set.
 The UI layer is Compose with Material 3. `ViewerViewModel` exposes a sealed
 `ViewerUiState` (Empty, Loading, Content, Error) driven by `FileLoader` results, and
 resolves the matching renderer through the registry. `ViewerScreen` is a `Scaffold`
-with a `TopAppBar` (file name title, detected-format subtitle, open action, and an
-overflow menu for Share, File details, Open another, and Theme) and dispatches the
+with a `TopAppBar` (file name title, detected-format subtitle, open action, a find
+action for text content, and an overflow menu for Share, File details, Find in
+file / Copy all text for text content, Open another, and Theme) and dispatches the
 loaded file to its renderer. Reusable state composables in
 `ui/components/StateScreens.kt` provide consistent `LoadingState`, `EmptyState`
-(friendly prompt plus supported-format chips), and `ErrorState` (icon, headline,
-message, and an open-another action) screens that the viewer reuses. Responsive
-horizontal padding is derived from `WindowSizeClass`, and theming supports
-light/dark plus Android 12+ dynamic color with a persisted System/Light/Dark toggle.
+(friendly prompt, a recent-files list, and a searchable/categorized
+supported-format list), and `ErrorState` (icon, headline, message, and an
+open-another action) screens that the viewer reuses. Responsive horizontal padding
+is derived from `WindowSizeClass`, and theming supports light/dark plus Android 12+
+dynamic color with a persisted System/Light/Dark toggle.
+
+## Navigation, recent files, and search
+
+Lumen behaves predictably with the system back button and adds a few local-only
+conveniences layered on the same offline guarantees as the rest of the app.
+
+- **Back navigation.** Back behaviour is derived from the current viewer state
+  by the pure `ui/BackNavigation.kt` logic (unit-tested on the JVM). When a file
+  is open, loading, or showing an error, pressing back returns to the home
+  screen (closing the file) instead of leaving the app. When the in-document
+  find bar is open, back closes it first.
+- **Exit confirmation.** At the home screen there is nowhere further back to go,
+  so back raises an "Exit Lumen?" confirmation dialog; only confirming it lets
+  the activity finish, so the app is never closed by an accidental back press.
+- **Recent files.** `data/RecentFilesPreferences.kt` persists a short,
+  de-duplicated, most-recent-first list of opened files via `SharedPreferences`
+  (mirroring the theme preference store). It is fully local: it stores only the
+  SAF URI string and the display name, declares no permission, and makes no
+  network calls. A file is remembered **only** when its persistable read
+  permission was successfully taken, so every remembered entry can be reopened;
+  the list is shown as tappable rows on the home screen (hidden when empty), and
+  an entry whose permission has since been revoked is pruned instead of failing.
+  The bounding/de-duplication rules live in the pure `data/RecentFilesLogic.kt`
+  and are unit-tested.
+- **Searchable, categorized format list.** The home screen groups the supported
+  formats into categories (Documents, Spreadsheets, Presentations, Images, Code
+  & config, Data, Archives) and offers a search field that filters them by label
+  or extension. The categories and the filter both come from
+  `render/SupportedFormats.kt`, the single source of truth, and the filter logic
+  is unit-tested.
+- **In-document find and copy-all.** For text-based content (plain text, source
+  code, and structured data), the top bar exposes a find action that opens a
+  search field, highlights every match, and lets you step through them; the
+  match-finding itself is the pure, unit-tested `render/logic/TextSearch.kt`.
+  Text content is selectable, and an explicit "Copy all text" action is
+  available from the overflow menu.
 
 ## Building and running
 
@@ -267,16 +333,16 @@ with `GRADLE_USER_HOME=/projects/sandbox/.gradle-home` and
 `ANDROID_SDK_ROOT=/projects/sandbox/android-sdk`, and these are the real results:
 
 - `./gradlew assembleDebug` -> BUILD SUCCESSFUL. It produces
-  `app/build/outputs/apk/debug/app-debug.apk` at about 16.2 MiB (16,952,916 bytes,
-  roughly 17 MB). A benign warning about being unable to strip
-  `libandroidx.graphics.path.so` and a harmless Gradle 9.0 deprecation warning are
-  printed; neither affects the build.
-- `./gradlew testDebugUnitTest` (run with `--rerun-tasks` to force fresh execution)
-  -> BUILD SUCCESSFUL, 61 unit tests, 0 failures, 0 errors, 0 skipped. These cover
-  the pure logic: renderer registry resolution, file loader MIME/extension/size
-  guard logic, the CSV/TSV parser, the JSON and XML formatters, the YAML
-  validation decision, the RTF converter, the code-language detection, and the EPUB
-  parser.
+  `app/build/outputs/apk/debug/app-debug.apk` at roughly 17 MB. A harmless Gradle
+  9.0 deprecation warning is printed; it does not affect the build.
+- `./gradlew testDebugUnitTest` -> BUILD SUCCESSFUL, 134 unit tests, 0 failures,
+  0 errors, 0 skipped. These cover the pure logic: renderer registry resolution,
+  file loader MIME/extension/size guard logic, the CSV/TSV parser, the JSON and
+  XML formatters, the YAML validation decision, the RTF converter, the
+  code-language detection, the EPUB parser, the OOXML Office parsers (docx/xlsx/
+  pptx), the archive lister, the back-navigation decision logic, the recent-files
+  list logic, the in-document text-search matcher, and the supported-format
+  search/grouping.
 
 What was NOT run: instrumented tests, UI tests, and any emulator-based tests were
 not executed, because this sandbox has no connected device, no emulator, and no KVM
