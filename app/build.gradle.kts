@@ -25,6 +25,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Debug-signed so assembleRelease yields an installable APK for
+            // distribution outside Google Play (sideloading). Swap in a
+            // production keystore via secrets when publishing to Play.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

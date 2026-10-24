@@ -31,14 +31,18 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Build debug and release APKs
+        run: ./gradlew assembleDebug assembleRelease
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Lumen-v1.0.apk
+      - name: Rename APKs
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Lumen-v1.0-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk Lumen-v1.0-release.apk
 
-      - name: Attach APK to release
+      - name: Attach APKs to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.release.tag_name || github.event.inputs.tag_name }}
-          files: Lumen-v1.0.apk
+          files: |
+            Lumen-v1.0-debug.apk
+            Lumen-v1.0-release.apk
