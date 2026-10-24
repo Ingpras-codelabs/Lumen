@@ -2,6 +2,8 @@ package com.offlineviewer.app.render
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -23,11 +25,16 @@ import androidx.compose.ui.semantics.semantics
 
 /**
  * Renders raster image formats that are not always previewable elsewhere
- * (webp, bmp, static gif, ico, plus png/jpeg) using Android's native
- * [BitmapFactory] decoders, with pinch-to-zoom and pan. SVG is intentionally
- * NOT handled here; the registry routes image/svg+xml to [SvgRenderer] first.
+ * (webp, bmp, static gif, ico, wbmp, plus png/jpeg) using Android's native
+ * decoders, with pinch-to-zoom and pan. SVG is intentionally NOT handled here;
+ * the registry routes image/svg+xml to [SvgRenderer] first.
  *
- * A decode failure degrades to a clear error state rather than crashing.
+ * HEIF/HEIC is additionally supported from API 28 (where platform HEIF decoding
+ * landed) via [ImageDecoder]; on older devices, or on any decode failure, the
+ * renderer degrades to a clear error state rather than crashing. Formats the
+ * platform cannot reliably decode across minSdk 21..targetSdk 34 (e.g. TIFF,
+ * AVIF) are deliberately NOT advertised to keep the supported-format claims
+ * honest.
  */
 class ImageRenderer : FileRenderer {
 
@@ -36,9 +43,13 @@ class ImageRenderer : FileRenderer {
         "image/webp", "image/bmp", "image/gif",
         "image/x-icon", "image/vnd.microsoft.icon",
         "image/png", "image/jpeg",
+        "image/vnd.wap.wbmp",
+        // HEIF/HEIC: decoded via ImageDecoder on API 28+ (gated in decode()).
+        "image/heif", "image/heic",
     )
     override val supportedExtensions: Set<String> = setOf(
-        "webp", "bmp", "gif", "ico", "png", "jpg", "jpeg",
+        "webp", "bmp", "gif", "ico", "png", "jpg", "jpeg", "wbmp",
+        "heif", "heic",
     )
 
     @Composable
@@ -127,18 +138,57 @@ class ImageRenderer : FileRenderer {
         val bytes = file.bytes ?: file.text?.toByteArray(Charsets.ISO_8859_1)
         if (bytes == null) {
             null
+        } else if (needsImageDecoder(file.mimeType, file.extension)) {
+            decodeWithImageDecoder(bytes)
         } else {
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = computeInSampleSize(bounds.outWidth, bounds.outHeight, TARGET_MAX_DIMENSION)
-            }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
+            decodeWithBitmapFactory(bytes)
         }
     } catch (e: Throwable) {
         null
     }
+
+    /** Standard bounds-first [BitmapFactory] path for the broadly-supported raster formats. */
+    private fun decodeWithBitmapFactory(bytes: ByteArray): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = computeInSampleSize(bounds.outWidth, bounds.outHeight, TARGET_MAX_DIMENSION)
+        }
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
+    }
+
+    /**
+     * Decodes HEIF/HEIC via [ImageDecoder] (API 28+). Returns null on older
+     * APIs so the caller shows the error state; the [ImageDecoder] path also
+     * downsamples to [TARGET_MAX_DIMENSION] to stay within memory. The decoded
+     * bitmap is made mutable/software-backed-compatible by Compose's
+     * asImageBitmap, so no extra copy is needed here.
+     */
+    private fun decodeWithImageDecoder(bytes: ByteArray): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+        val source = ImageDecoder.createSource(java.nio.ByteBuffer.wrap(bytes))
+        return ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+            decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            val sample = computeInSampleSize(info.size.width, info.size.height, TARGET_MAX_DIMENSION)
+            if (sample > 1) {
+                decoder.setTargetSize(info.size.width / sample, info.size.height / sample)
+            }
+        }
+    }
+}
+
+/**
+ * Pure decoder-path selector: HEIF/HEIC must go through [ImageDecoder] (API
+ * 28+) because [BitmapFactory] does not reliably decode them across the
+ * supported API range, while every other advertised raster format uses the
+ * [BitmapFactory] bounds-first path. Framework-free so it is unit-testable.
+ */
+internal fun needsImageDecoder(mimeType: String?, extension: String?): Boolean {
+    val mime = mimeType?.trim()?.lowercase()
+    if (mime == "image/heif" || mime == "image/heic") return true
+    val ext = extension?.trim()?.lowercase()?.removePrefix(".")
+    return ext == "heif" || ext == "heic"
 }
 
 /**

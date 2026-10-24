@@ -93,6 +93,69 @@ class RendererRegistryTest {
         assertTrue(reg.fallback is PlainTextRenderer)
     }
 
+    @Test
+    fun resolvesOfficeOoxmlFormatsByMimeAndExtension() {
+        val reg = RendererRegistry.createDefault()
+
+        val docxMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        val xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        val pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+        assertTrue(reg.resolve(docxMime, null) is DocxRenderer)
+        assertTrue(reg.resolve(null, "docx") is DocxRenderer)
+        assertTrue(reg.resolve(xlsxMime, null) is XlsxRenderer)
+        assertTrue(reg.resolve(null, "xlsx") is XlsxRenderer)
+        assertTrue(reg.resolve(pptxMime, null) is PptxRenderer)
+        assertTrue(reg.resolve(null, "pptx") is PptxRenderer)
+
+        assertEquals("Word document", reg.resolve(docxMime, null).formatName)
+        assertEquals("Spreadsheet", reg.resolve(xlsxMime, null).formatName)
+        assertEquals("Presentation", reg.resolve(pptxMime, null).formatName)
+    }
+
+    @Test
+    fun resolvesArchiveFormatsByMimeAndExtension() {
+        val reg = RendererRegistry.createDefault()
+
+        assertTrue(reg.resolve("application/zip", null) is ArchiveRenderer)
+        assertTrue(reg.resolve("application/java-archive", null) is ArchiveRenderer)
+        assertTrue(reg.resolve("application/x-tar", null) is ArchiveRenderer)
+        assertTrue(reg.resolve("application/gzip", null) is ArchiveRenderer)
+
+        assertTrue(reg.resolve(null, "zip") is ArchiveRenderer)
+        assertTrue(reg.resolve(null, "jar") is ArchiveRenderer)
+        assertTrue(reg.resolve(null, "tar") is ArchiveRenderer)
+        assertTrue(reg.resolve(null, "gz") is ArchiveRenderer)
+        assertTrue(reg.resolve(null, "tgz") is ArchiveRenderer)
+
+        assertEquals("Archive", reg.resolve("application/zip", null).formatName)
+    }
+
+    @Test
+    fun resolvesNewImageTypesToImageRenderer() {
+        val reg = RendererRegistry.createDefault()
+
+        assertTrue(reg.resolve("image/vnd.wap.wbmp", null) is ImageRenderer)
+        assertTrue(reg.resolve("image/heif", null) is ImageRenderer)
+        assertTrue(reg.resolve("image/heic", null) is ImageRenderer)
+        assertTrue(reg.resolve(null, "wbmp") is ImageRenderer)
+        assertTrue(reg.resolve(null, "heic") is ImageRenderer)
+        assertTrue(reg.resolve(null, "heif") is ImageRenderer)
+    }
+
+    @Test
+    fun resolvesNewTextAndCodeTypesToSourceCodeRenderer() {
+        val reg = RendererRegistry.createDefault()
+
+        assertEquals("Source code", reg.resolve(null, "scala").formatName)
+        assertEquals("Source code", reg.resolve(null, "dart").formatName)
+        assertEquals("Source code", reg.resolve(null, "lua").formatName)
+        assertEquals("Source code", reg.resolve(null, "gradle").formatName)
+        assertEquals("Source code", reg.resolve(null, "conf").formatName)
+        assertEquals("Source code", reg.resolve(null, "env").formatName)
+        assertEquals("Source code", reg.resolve(null, "ps1").formatName)
+    }
+
     /**
      * Locks the documented invariant (see [RendererRegistry.createDefault]):
      * because SVG is an image type, [SvgRenderer] MUST resolve ahead of the

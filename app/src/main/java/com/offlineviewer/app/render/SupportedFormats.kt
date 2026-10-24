@@ -8,41 +8,111 @@ package com.offlineviewer.app.render
  */
 object SupportedFormats {
 
+    /**
+     * Coarse grouping used to keep the (now large) home-screen format list
+     * browsable. Kept here so the UI and any tests share the single source of
+     * truth; [label] is the user-facing section heading.
+     */
+    enum class Category(val label: String) {
+        DOCUMENTS("Documents"),
+        SPREADSHEETS("Spreadsheets"),
+        PRESENTATIONS("Presentations"),
+        IMAGES("Images"),
+        CODE("Code & config"),
+        DATA("Data"),
+        ARCHIVES("Archives"),
+    }
+
     /** A single advertised format grouping. */
     data class Format(
         val label: String,
         val extensions: List<String>,
         val mimeTypes: List<String>,
+        val category: Category,
     )
 
     val all: List<Format> = listOf(
-        Format("SVG image", listOf("svg"), listOf("image/svg+xml")),
-        Format("Markdown", listOf("md", "markdown"), listOf("text/markdown", "text/x-markdown")),
-        Format("CSV", listOf("csv"), listOf("text/csv")),
-        Format("TSV", listOf("tsv"), listOf("text/tab-separated-values")),
-        Format("JSON", listOf("json"), listOf("application/json", "text/json")),
-        Format("XML", listOf("xml"), listOf("application/xml", "text/xml")),
-        Format("YAML", listOf("yaml", "yml"), listOf("text/yaml", "application/x-yaml", "application/yaml")),
-        Format("Plain text / log", listOf("txt", "log"), listOf("text/plain")),
-        Format("HTML", listOf("html", "htm"), listOf("text/html")),
-        Format("Rich Text (RTF)", listOf("rtf"), listOf("application/rtf", "text/rtf")),
-        Format("EPUB e-book", listOf("epub"), listOf("application/epub+zip")),
+        Format("SVG image", listOf("svg"), listOf("image/svg+xml"), Category.IMAGES),
+        Format("Markdown", listOf("md", "markdown"), listOf("text/markdown", "text/x-markdown"), Category.DOCUMENTS),
+        Format("CSV", listOf("csv"), listOf("text/csv"), Category.DATA),
+        Format("TSV", listOf("tsv"), listOf("text/tab-separated-values"), Category.DATA),
+        Format("JSON", listOf("json"), listOf("application/json", "text/json"), Category.DATA),
+        Format("XML", listOf("xml"), listOf("application/xml", "text/xml"), Category.DATA),
+        Format("YAML", listOf("yaml", "yml"), listOf("text/yaml", "application/x-yaml", "application/yaml"), Category.DATA),
+        Format("Plain text / log", listOf("txt", "log"), listOf("text/plain"), Category.DOCUMENTS),
+        Format("HTML", listOf("html", "htm"), listOf("text/html"), Category.DOCUMENTS),
+        Format("Rich Text (RTF)", listOf("rtf"), listOf("application/rtf", "text/rtf"), Category.DOCUMENTS),
+        Format("EPUB e-book", listOf("epub"), listOf("application/epub+zip"), Category.DOCUMENTS),
+        Format(
+            "Word document",
+            listOf("docx"),
+            listOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            Category.DOCUMENTS,
+        ),
+        Format(
+            "Spreadsheet",
+            listOf("xlsx"),
+            listOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+            Category.SPREADSHEETS,
+        ),
+        Format(
+            "Presentation",
+            listOf("pptx"),
+            listOf("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+            Category.PRESENTATIONS,
+        ),
+        Format(
+            "Archive",
+            listOf("zip", "jar", "tar", "gz", "tgz"),
+            listOf("application/zip", "application/java-archive", "application/x-tar", "application/gzip", "application/x-gzip"),
+            Category.ARCHIVES,
+        ),
         Format(
             "Image",
-            listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg"),
-            listOf("image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon", "image/png", "image/jpeg"),
+            listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg", "wbmp", "heif", "heic"),
+            listOf(
+                "image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon",
+                "image/png", "image/jpeg", "image/vnd.wap.wbmp", "image/heif", "image/heic",
+            ),
+            Category.IMAGES,
         ),
         Format(
             "Source code",
             listOf(
                 "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
                 "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
-                "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
-                "cfg", "properties",
+                "php", "swift", "sh", "bash", "zsh", "sql", "css", "scss", "less",
+                "toml", "ini", "cfg", "conf", "env", "properties",
+                "scala", "sc", "dart", "lua", "pl", "pm", "r", "groovy", "gradle",
+                "ps1", "bat", "cmd",
             ),
             listOf("text/x-java", "text/x-kotlin", "text/x-python", "application/javascript", "application/x-sh", "text/x-csrc", "text/x-c++src"),
+            Category.CODE,
         ),
     )
+
+    /**
+     * Pure, framework-free filter used by the home screen's format search. A
+     * blank [query] returns [all]; otherwise a format matches when the query is
+     * a case-insensitive substring of its label or any of its extensions. Kept
+     * here (and unit-tested) so the UI only has to render the result.
+     */
+    fun filter(query: String): List<Format> {
+        val q = query.trim().lowercase().removePrefix(".")
+        if (q.isEmpty()) return all
+        return all.filter { format ->
+            format.label.lowercase().contains(q) ||
+                format.extensions.any { it.contains(q) }
+        }
+    }
+
+    /** [all], grouped by [Category] in declaration order, skipping empty groups. */
+    fun grouped(formats: List<Format> = all): List<Pair<Category, List<Format>>> =
+        Category.entries.mapNotNull { category ->
+            formats.filter { it.category == category }
+                .takeIf { it.isNotEmpty() }
+                ?.let { category to it }
+        }
 
     /** Union of every advertised extension (lower-cased, no dot). */
     val allExtensions: Set<String> = all.flatMap { it.extensions }.toSet()
@@ -51,15 +121,18 @@ object SupportedFormats {
     val allMimeTypes: Set<String> = all.flatMap { it.mimeTypes }.toSet()
 
     /**
-     * Extensions that are safe to always decode as UTF-8 text. Binary-ish
-     * container formats (epub) are excluded so they are read as raw bytes.
+     * Extensions that are safe to always decode as UTF-8 text. Binary container
+     * formats (epub, the OOXML Office formats, archives) and binary image types
+     * (including wbmp/heif/heic) are excluded so they are read as raw bytes.
      */
     val textExtensions: Set<String> = setOf(
         "svg", "md", "markdown", "csv", "tsv", "json", "xml",
         "yaml", "yml", "txt", "log", "html", "htm", "rtf",
         "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
         "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
-        "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
-        "cfg", "properties",
+        "php", "swift", "sh", "bash", "zsh", "sql", "css", "scss", "less",
+        "toml", "ini", "cfg", "conf", "env", "properties",
+        "scala", "sc", "dart", "lua", "pl", "pm", "r", "groovy", "gradle",
+        "ps1", "bat", "cmd",
     )
 }

@@ -1,6 +1,8 @@
 package com.offlineviewer.app.render
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -42,5 +44,23 @@ class ImageRendererTest {
         assertEquals(1, computeInSampleSize(-1, -1, 2048))
         assertEquals(1, computeInSampleSize(0, 0, 2048))
         assertEquals(1, computeInSampleSize(4096, 4096, 0))
+    }
+
+    @Test
+    fun heifAndHeicRouteThroughImageDecoderPath() {
+        assertTrue(needsImageDecoder("image/heif", null))
+        assertTrue(needsImageDecoder("image/heic", null))
+        assertTrue(needsImageDecoder(null, "heif"))
+        assertTrue(needsImageDecoder(null, "heic"))
+        assertTrue(needsImageDecoder(null, ".HEIC"))
+    }
+
+    @Test
+    fun broadlySupportedRasterFormatsUseBitmapFactoryPath() {
+        assertFalse(needsImageDecoder("image/png", "png"))
+        assertFalse(needsImageDecoder("image/jpeg", "jpg"))
+        assertFalse(needsImageDecoder("image/webp", "webp"))
+        assertFalse(needsImageDecoder("image/vnd.wap.wbmp", "wbmp"))
+        assertFalse(needsImageDecoder(null, null))
     }
 }

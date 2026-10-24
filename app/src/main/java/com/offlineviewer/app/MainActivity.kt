@@ -24,9 +24,11 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offlineviewer.app.data.FileLoader
+import com.offlineviewer.app.data.RecentFilesPreferences
 import com.offlineviewer.app.data.ThemePreferences
 import com.offlineviewer.app.render.LoadedFile
 import com.offlineviewer.app.ui.ViewerScreen
+import com.offlineviewer.app.ui.ViewerUiState
 import com.offlineviewer.app.ui.ViewerViewModel
 import com.offlineviewer.app.ui.theme.AppTheme
 import java.io.File
@@ -39,6 +41,7 @@ import java.io.File
 class MainActivity : ComponentActivity() {
 
     private lateinit var themePreferences: ThemePreferences
+    private lateinit var recentFilesPreferences: RecentFilesPreferences
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +49,7 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         themePreferences = ThemePreferences(this)
+        recentFilesPreferences = RecentFilesPreferences(this)
         enableEdgeToEdge()
         setContent {
             val themeMode by themePreferences.themeMode.collectAsStateWithLifecycle()
@@ -56,6 +60,7 @@ class MainActivity : ComponentActivity() {
                     windowSizeClass = windowSizeClass,
                     themeMode = themeMode,
                     onThemeModeChange = themePreferences::setThemeMode,
+                    recentFiles = recentFilesPreferences,
                 )
             }
         }
@@ -77,18 +82,36 @@ class MainActivity : ComponentActivity() {
         windowSizeClass: androidx.compose.material3.windowsizeclass.WindowSizeClass,
         themeMode: com.offlineviewer.app.ui.theme.ThemeMode,
         onThemeModeChange: (com.offlineviewer.app.ui.theme.ThemeMode) -> Unit,
+        recentFiles: RecentFilesPreferences,
     ) {
         val context = LocalContext.current
         val viewModel: ViewerViewModel = viewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
+        val recent by recentFiles.recent.collectAsStateWithLifecycle()
         val loader = remember(context) { FileLoader(context.contentResolver) }
+
+        // Uris for which persistable read permission was successfully taken, so
+        // only reopenable files get remembered. Keyed by uri string.
+        val persistedUris = remember { mutableStateOf(setOf<String>()) }
 
         val openLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.OpenDocument(),
         ) { uri ->
             if (uri != null) {
-                takePersistableReadPermission(uri)
+                if (takePersistableReadPermission(uri)) {
+                    persistedUris.value = persistedUris.value + uri.toString()
+                }
                 viewModel.open(uri, loader)
+            }
+        }
+
+        // Record a file in recents only once it has loaded successfully AND its
+        // read permission was persisted, so remembered entries can be reopened.
+        LaunchedEffect(state) {
+            val content = state as? ViewerUiState.Content ?: return@LaunchedEffect
+            val uri = viewModel.currentUri?.toString() ?: return@LaunchedEffect
+            if (uri in persistedUris.value) {
+                recentFiles.add(uri, content.file.displayName)
             }
         }
 
@@ -111,15 +134,43 @@ class MainActivity : ComponentActivity() {
             themeMode = themeMode,
             onThemeModeChange = onThemeModeChange,
             onShare = { file -> shareCurrentFile(file) },
+            onReturnHome = { viewModel.clear() },
+            onExit = { finish() },
+            recentFiles = recent,
+            onOpenRecent = { entry ->
+                val uri = runCatching { Uri.parse(entry.uri) }.getOrNull()
+                if (uri == null) {
+                    recentFiles.remove(entry.uri)
+                } else {
+                    // Reopening relies on the previously persisted permission;
+                    // if it was revoked the load fails and we prune the entry.
+                    if (!hasPersistedReadPermission(uri)) {
+                        recentFiles.remove(entry.uri)
+                    } else {
+                        persistedUris.value = persistedUris.value + entry.uri
+                        viewModel.open(uri, loader)
+                    }
+                }
+            },
             modifier = Modifier,
         )
     }
 
-    private fun takePersistableReadPermission(uri: Uri) {
+    /** Takes persistable read permission; returns true on success. */
+    private fun takePersistableReadPermission(uri: Uri): Boolean =
         runCatching {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    }
+        }.isSuccess
+
+    /**
+     * True when a persisted read grant for [uri] still exists, so a remembered
+     * file can be reopened. Used to prune stale recent entries up front rather
+     * than only reacting to a failed load.
+     */
+    private fun hasPersistedReadPermission(uri: Uri): Boolean =
+        runCatching {
+            contentResolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+        }.getOrDefault(false)
 
     /**
      * Shares the currently-open file via the system share sheet. Fully local

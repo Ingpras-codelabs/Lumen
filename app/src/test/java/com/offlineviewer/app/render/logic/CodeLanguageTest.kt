@@ -39,4 +39,20 @@ class CodeLanguageTest {
         val exts = CodeLanguage.allExtensions
         assertTrue(exts.containsAll(listOf("kt", "java", "js", "ts", "py", "c", "cpp", "cs", "go", "rs", "rb", "php", "swift", "sh", "sql", "css", "toml", "ini", "properties")))
     }
+
+    @Test
+    fun detectsNewlyAddedLanguagesAndConfigExtensions() {
+        assertEquals(CodeLanguage.SCALA, CodeLanguage.fromExtension("scala"))
+        assertEquals(CodeLanguage.DART, CodeLanguage.fromExtension("dart"))
+        assertEquals(CodeLanguage.LUA, CodeLanguage.fromExtension("lua"))
+        assertEquals(CodeLanguage.PERL, CodeLanguage.fromExtension("pl"))
+        assertEquals(CodeLanguage.R, CodeLanguage.fromExtension("r"))
+        assertEquals(CodeLanguage.GROOVY, CodeLanguage.fromExtension("gradle"))
+        assertEquals(CodeLanguage.POWERSHELL, CodeLanguage.fromExtension("ps1"))
+        assertEquals(CodeLanguage.BATCH, CodeLanguage.fromExtension("bat"))
+        // Config/data formats route through the INI/code highlighter.
+        assertEquals(CodeLanguage.INI, CodeLanguage.fromExtension("conf"))
+        assertEquals(CodeLanguage.INI, CodeLanguage.fromExtension("env"))
+        assertEquals(CodeLanguage.CSS, CodeLanguage.fromExtension("scss"))
+    }
 }
