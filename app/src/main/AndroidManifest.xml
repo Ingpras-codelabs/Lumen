@@ -43,6 +43,13 @@
                 <data android:mimeType="application/rtf" />
                 <data android:mimeType="text/rtf" />
                 <data android:mimeType="application/epub+zip" />
+                <data android:mimeType="image/webp" />
+                <data android:mimeType="image/bmp" />
+                <data android:mimeType="image/gif" />
+                <data android:mimeType="image/x-icon" />
+                <data android:mimeType="image/vnd.microsoft.icon" />
+                <data android:mimeType="image/png" />
+                <data android:mimeType="image/jpeg" />
             </intent-filter>
 
             <!-- Appear in "Open with" by file extension when the MIME type is
@@ -70,6 +77,31 @@
                 <data android:pathPattern=".*\\.htm" />
                 <data android:pathPattern=".*\\.rtf" />
                 <data android:pathPattern=".*\\.epub" />
+                <data android:pathPattern=".*\\.webp" />
+                <data android:pathPattern=".*\\.bmp" />
+                <data android:pathPattern=".*\\.gif" />
+                <data android:pathPattern=".*\\.ico" />
+                <data android:pathPattern=".*\\.kt" />
+                <data android:pathPattern=".*\\.kts" />
+                <data android:pathPattern=".*\\.java" />
+                <data android:pathPattern=".*\\.js" />
+                <data android:pathPattern=".*\\.ts" />
+                <data android:pathPattern=".*\\.py" />
+                <data android:pathPattern=".*\\.c" />
+                <data android:pathPattern=".*\\.cpp" />
+                <data android:pathPattern=".*\\.h" />
+                <data android:pathPattern=".*\\.cs" />
+                <data android:pathPattern=".*\\.go" />
+                <data android:pathPattern=".*\\.rb" />
+                <data android:pathPattern=".*\\.rs" />
+                <data android:pathPattern=".*\\.php" />
+                <data android:pathPattern=".*\\.swift" />
+                <data android:pathPattern=".*\\.sh" />
+                <data android:pathPattern=".*\\.sql" />
+                <data android:pathPattern=".*\\.css" />
+                <data android:pathPattern=".*\\.toml" />
+                <data android:pathPattern=".*\\.ini" />
+                <data android:pathPattern=".*\\.properties" />
             </intent-filter>
 
             <!-- Receive shared files from the share sheet (SEND). -->
@@ -93,6 +125,13 @@
                 <data android:mimeType="application/rtf" />
                 <data android:mimeType="text/rtf" />
                 <data android:mimeType="application/epub+zip" />
+                <data android:mimeType="image/webp" />
+                <data android:mimeType="image/bmp" />
+                <data android:mimeType="image/gif" />
+                <data android:mimeType="image/x-icon" />
+                <data android:mimeType="image/vnd.microsoft.icon" />
+                <data android:mimeType="image/png" />
+                <data android:mimeType="image/jpeg" />
             </intent-filter>
         </activity>
     </application>

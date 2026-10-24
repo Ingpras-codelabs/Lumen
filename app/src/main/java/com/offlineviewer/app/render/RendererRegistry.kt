@@ -43,23 +43,33 @@ class RendererRegistry(
 
     companion object {
         /**
-         * Builds the default registry with all FEAT-002 renderers registered.
-         * Order matters only for overlapping claims; the plain-text fallback is
-         * last-resort and never shadows a format-specific renderer.
+         * Builds the default registry with every FEAT-003 renderer registered.
+         *
+         * Resolution is deterministic (see [resolve]): a renderer earlier in
+         * this list wins only when two renderers claim the same MIME type or
+         * extension. The curated format sets are disjoint except that SVG is an
+         * image type, so [SvgRenderer] is listed BEFORE [ImageRenderer] to
+         * guarantee image/svg+xml and .svg route to the vector renderer rather
+         * than the raster one. The plain-text renderer is both the explicit
+         * handler for text/plain/.txt/.log and the universal last-resort
+         * fallback so EVERY file renders something.
          */
         fun createDefault(): RendererRegistry {
             val plainText = PlainTextRenderer()
             return RendererRegistry(
                 renderers = listOf(
+                    SvgRenderer(),            // must precede ImageRenderer (svg is image/*)
                     MarkdownRenderer(),
-                    SvgRenderer(),
-                    DelimitedTextRenderer(),
-                    StructuredDataRenderer(),
+                    DelimitedTextRenderer(),  // CSV / TSV
+                    StructuredDataRenderer(), // JSON / XML / YAML
                     HtmlRenderer(),
+                    RtfRenderer(),
+                    EpubRenderer(),
                     SourceCodeRenderer(),
-                    plainText,
+                    ImageRenderer(),          // webp/bmp/gif/ico/png/jpeg
+                    plainText,                // text/plain + explicit text extensions
                 ),
-                fallback = plainText,
+                fallback = plainText,         // universal last resort
             )
         }
     }

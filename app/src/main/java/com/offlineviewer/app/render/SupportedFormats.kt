@@ -28,9 +28,19 @@ object SupportedFormats {
         Format("Rich Text (RTF)", listOf("rtf"), listOf("application/rtf", "text/rtf")),
         Format("EPUB e-book", listOf("epub"), listOf("application/epub+zip")),
         Format(
+            "Image",
+            listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg"),
+            listOf("image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon", "image/png", "image/jpeg"),
+        ),
+        Format(
             "Source code",
-            listOf("kt", "java", "js", "ts", "py", "c", "cpp", "h", "cs", "go", "rb", "rs", "sh", "sql", "css"),
-            listOf("text/x-java", "text/x-kotlin", "text/x-python", "application/javascript"),
+            listOf(
+                "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
+                "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
+                "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
+                "cfg", "properties",
+            ),
+            listOf("text/x-java", "text/x-kotlin", "text/x-python", "application/javascript", "application/x-sh", "text/x-csrc", "text/x-c++src"),
         ),
     )
 
@@ -47,7 +57,9 @@ object SupportedFormats {
     val textExtensions: Set<String> = setOf(
         "svg", "md", "markdown", "csv", "tsv", "json", "xml",
         "yaml", "yml", "txt", "log", "html", "htm", "rtf",
-        "kt", "java", "js", "ts", "py", "c", "cpp", "h", "cs",
-        "go", "rb", "rs", "sh", "sql", "css",
+        "kt", "kts", "java", "js", "mjs", "jsx", "ts", "tsx", "py",
+        "c", "h", "cpp", "cc", "cxx", "hpp", "cs", "go", "rb", "rs",
+        "php", "swift", "sh", "bash", "sql", "css", "toml", "ini",
+        "cfg", "properties",
     )
 }

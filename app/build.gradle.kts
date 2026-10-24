@@ -56,7 +56,19 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
+    // Offline rendering libraries (all permissively licensed, no network).
+    implementation(libs.androidsvg)
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.ext.tables)
+    implementation(libs.markwon.ext.strikethrough)
+    implementation(libs.markwon.ext.tasklist)
+    implementation(libs.markwon.html)
+    implementation(libs.snakeyaml)
+
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
+    // Real org.json on the JVM so JsonFormatter is unit-testable (the android.jar
+    // stub throws for all org.json calls in unit tests).
+    testImplementation(libs.org.json)
 }
