@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OfflineViewer"
+rootProject.name = "Lumen"
 include(":app")

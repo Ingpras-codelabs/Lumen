@@ -1,18 +1,24 @@
-# Offline Viewer
+# Lumen
 
-Offline Viewer is a completely free, fully offline native Android app (Kotlin +
-Jetpack Compose + Material 3) that renders file formats Android does not preview
-natively. It prioritizes SVG and Markdown and also handles a broad curated set:
-plain text/log, JSON, XML, YAML, CSV, TSV, HTML, RTF, EPUB, source code with
-syntax highlighting, and extra image types (webp, bmp, gif, ico). Every format is
-rendered by a pluggable renderer and, when a file matches nothing specific, it
-falls back to a readable plain-text view so no file is ever left unhandled.
+Lumen (an offline file viewer) is a completely free, fully offline native Android
+app (Kotlin + Jetpack Compose + Material 3) that renders file formats Android does
+not preview natively. It prioritizes SVG and Markdown and also handles a broad
+curated set: plain text/log, JSON, XML, YAML, CSV, TSV, HTML, RTF, EPUB, source
+code with syntax highlighting, and extra image types (webp, bmp, gif, ico). Every
+format is rendered by a pluggable renderer and, when a file matches nothing
+specific, it falls back to a readable plain-text view so no file is ever left
+unhandled.
+
+Lumen is free and open source software (FOSS), released under the MIT License and
+built by Ingpras Codelabs. It is completely free for everyone: no ads, no
+telemetry, no accounts, and no cost, now or ever.
 
 ## Completely free and fully offline
 
-The app is free and ships no ads, no telemetry, and no account system. It is
-offline by construction, not by policy, and that guarantee is enforced in three
-concrete ways:
+The app is completely free for everyone and ships no ads, no telemetry, and no
+account system. There is no cost of any kind, and the full source code is open
+under the MIT License. Lumen is offline by construction, not by policy, and that
+guarantee is enforced in three concrete ways:
 
 1. No INTERNET permission. `app/src/main/AndroidManifest.xml` declares no
    `<uses-permission>` entries at all, and in particular never declares
@@ -95,7 +101,7 @@ Notes:
 
 ## Architecture
 
-Offline Viewer is a single-activity Compose app organized around a small, pluggable
+Lumen is a single-activity Compose app organized around a small, pluggable
 rendering abstraction. Everything that can be is kept framework-free so it is
 unit-testable on the JVM.
 
@@ -241,8 +247,8 @@ With a device connected over USB (USB debugging enabled) or an emulator running:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Then launch Offline Viewer from the launcher, or open any supported file from a
-file manager and choose Offline Viewer in the "Open with" sheet.
+Then launch Lumen from the launcher, or open any supported file from a
+file manager and choose Lumen in the "Open with" sheet.
 
 ## Honest build status
 
@@ -310,9 +316,21 @@ app-root/
   gradlew, gradlew.bat, gradle/wrapper/
 ```
 
+## License
+
+Lumen is free and open source software (FOSS), released under the
+[MIT License](LICENSE) and built by Ingpras Codelabs. Copyright (c) 2026 Ingpras
+Codelabs. You are free to use, study, modify, and redistribute it. The app is
+completely free for everyone, with no ads, no telemetry, no accounts, and no cost.
+
+Releasing Lumen under the MIT License covers the project's own original code; it
+does not change the licensing of the third-party libraries it bundles, which remain
+under their respective licenses as described below.
+
 ## License of bundled libraries
 
 All third-party runtime libraries are under the Apache License 2.0: AndroidSVG,
 Markwon, SnakeYAML, and the AndroidX / Jetpack Compose libraries. `org.json`
 (Android built-in, used as a test dependency) is public domain. Logic marked "n/a"
-in the format table is original to this project.
+in the format table is original to this project and is licensed under the MIT
+License as stated above.
