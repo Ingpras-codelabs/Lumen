@@ -3,6 +3,7 @@ package com.offlineviewer.app.render
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,15 +32,17 @@ class PlainTextRenderer : FileRenderer {
     @Composable
     override fun Render(file: LoadedFile, modifier: Modifier) {
         val body = file.text ?: binaryDescriptor(file)
-        Text(
-            text = body,
-            fontFamily = FontFamily.Monospace,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        )
+        SelectionContainer(modifier = modifier) {
+            Text(
+                text = body,
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            )
+        }
     }
 
     private fun binaryDescriptor(file: LoadedFile): String {

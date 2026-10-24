@@ -41,8 +41,13 @@ class ViewerViewModel(
     private val _state = MutableStateFlow<ViewerUiState>(ViewerUiState.Empty)
     val state: StateFlow<ViewerUiState> = _state.asStateFlow()
 
+    /** The Uri of the file currently loaded, for share / re-open actions. */
+    var currentUri: Uri? = null
+        private set
+
     /** Load and render the given [uri] using the supplied [loader]. */
     fun open(uri: Uri, loader: FileLoader) {
+        currentUri = uri
         _state.value = ViewerUiState.Loading
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) { loader.load(uri) }
@@ -59,6 +64,7 @@ class ViewerViewModel(
 
     /** Reset back to the empty / home state. */
     fun clear() {
+        currentUri = null
         _state.value = ViewerUiState.Empty
     }
 }

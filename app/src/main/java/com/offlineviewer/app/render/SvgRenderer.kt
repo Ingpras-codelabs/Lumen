@@ -5,18 +5,20 @@ import android.graphics.Color
 import android.graphics.Picture
 import android.graphics.drawable.PictureDrawable
 import android.widget.ImageView
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
 import com.caverock.androidsvg.SVG
 
@@ -54,12 +56,24 @@ class SvgRenderer : FileRenderer {
         Box(
             modifier = modifier
                 .fillMaxSize()
+                .semantics { contentDescription = "SVG image: ${file.displayName}" }
                 .pointerInput(parsed) {
                     detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 10f)
+                        scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
                         offsetX += pan.x
                         offsetY += pan.y
                     }
+                }
+                .pointerInput(parsed) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            if (scale > 1f) {
+                                scale = 1f; offsetX = 0f; offsetY = 0f
+                            } else {
+                                scale = DOUBLE_TAP_SCALE
+                            }
+                        },
+                    )
                 },
         ) {
             AndroidView(
@@ -111,5 +125,11 @@ class SvgRenderer : FileRenderer {
         val c: Canvas = beginRecording(1, 1)
         c.drawColor(Color.TRANSPARENT)
         endRecording()
+    }
+
+    private companion object {
+        const val MIN_SCALE = 0.5f
+        const val MAX_SCALE = 10f
+        const val DOUBLE_TAP_SCALE = 2.5f
     }
 }

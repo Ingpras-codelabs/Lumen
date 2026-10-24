@@ -3,6 +3,7 @@ package com.offlineviewer.app.render
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +18,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * Renders raster image formats that are not always previewable elsewhere
@@ -57,18 +60,32 @@ class ImageRenderer : FileRenderer {
         Box(
             modifier = modifier
                 .fillMaxSize()
+                .semantics { contentDescription = "Image: ${file.displayName}" }
                 .pointerInput(bitmap) {
                     detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 10f)
+                        scale = (scale * zoom).coerceIn(MIN_SCALE, MAX_SCALE)
                         offsetX += pan.x
                         offsetY += pan.y
                     }
+                }
+                .pointerInput(bitmap) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            if (scale > 1f) {
+                                scale = 1f; offsetX = 0f; offsetY = 0f
+                            } else {
+                                scale = DOUBLE_TAP_SCALE
+                            }
+                        },
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = file.displayName,
+                // Decorative at the Image level; the Box carries the meaningful
+                // description so TalkBack announces the image once.
+                contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
@@ -80,6 +97,12 @@ class ImageRenderer : FileRenderer {
                     ),
             )
         }
+    }
+
+    private companion object {
+        const val MIN_SCALE = 0.5f
+        const val MAX_SCALE = 10f
+        const val DOUBLE_TAP_SCALE = 2.5f
     }
 
     private fun decode(file: LoadedFile): Bitmap? = try {

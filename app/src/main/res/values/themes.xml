@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Base application theme used after the splash screen is dismissed. -->
     <style name="Theme.OfflineViewer" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Launch theme: the AndroidX SplashScreen compat theme for a smooth cold
+         start. postSplashScreenTheme hands off to the real app theme once the
+         activity is ready. -->
+    <style name="Theme.OfflineViewer.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.OfflineViewer</item>
+    </style>
 </resources>

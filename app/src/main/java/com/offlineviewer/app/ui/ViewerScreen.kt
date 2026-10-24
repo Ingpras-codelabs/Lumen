@@ -1,45 +1,73 @@
 package com.offlineviewer.app.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.windowsizeclass.WindowSizeClass
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.AlertDialog
+import com.offlineviewer.app.render.LoadedFile
+import com.offlineviewer.app.ui.components.EmptyState
+import com.offlineviewer.app.ui.components.ErrorState
+import com.offlineviewer.app.ui.components.LoadingState
+import com.offlineviewer.app.ui.theme.ThemeMode
 
 /**
- * Top-level viewer screen. Renders a top app bar with the current file name and
- * detected format, an action to open another file, and a content area that
- * dispatches to the resolved renderer. Handles Loading / Empty / Error / Content.
+ * Top-level viewer screen. Material 3 Scaffold + TopAppBar showing the file
+ * name and detected format, with an overflow menu (open another, share,
+ * format details, theme). The content area dispatches to the resolved renderer
+ * and adapts its horizontal padding to the available width via [WindowSizeClass].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ViewerScreen(
     state: ViewerUiState,
     onOpenFile: () -> Unit,
+    windowSizeClass: WindowSizeClass,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val title = when (state) {
-        is ViewerUiState.Content -> state.file.displayName
-        else -> "Offline Viewer"
-    }
-    val subtitle = (state as? ViewerUiState.Content)?.renderer?.formatName
+    val content = state as? ViewerUiState.Content
+    val title = content?.file?.displayName ?: "Offline Viewer"
+    val subtitle = content?.renderer?.formatName
+
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -56,7 +84,7 @@ fun ViewerScreen(
                         if (subtitle != null) {
                             Text(
                                 text = subtitle,
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -66,68 +94,165 @@ fun ViewerScreen(
                     IconButton(onClick = onOpenFile) {
                         Icon(Icons.Filled.FolderOpen, contentDescription = "Open a file")
                     }
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        if (content != null) {
+                            DropdownMenuItem(
+                                text = { Text("Share") },
+                                onClick = { menuExpanded = false; onShare() },
+                                leadingIcon = { Icon(Icons.Filled.Share, contentDescription = null) },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("File details") },
+                                onClick = { menuExpanded = false; showDetails = true },
+                                leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Open another file") },
+                            onClick = { menuExpanded = false; onOpenFile() },
+                            leadingIcon = {
+                                Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Theme") },
+                            onClick = { menuExpanded = false; showThemeDialog = true },
+                            leadingIcon = { Icon(Icons.Filled.DarkMode, contentDescription = null) },
+                        )
+                    }
                 },
             )
         },
     ) { innerPadding ->
+        val horizontalPadding = when (windowSizeClass.widthSizeClass) {
+            WindowWidthSizeClass.Expanded -> 48.dp
+            WindowWidthSizeClass.Medium -> 24.dp
+            else -> 0.dp
+        }
         val contentModifier = Modifier
             .fillMaxSize()
             .padding(innerPadding)
+            .padding(horizontal = horizontalPadding)
+
         when (state) {
-            is ViewerUiState.Empty -> HomeScreen(onOpenFile = onOpenFile, modifier = contentModifier)
+            is ViewerUiState.Empty -> EmptyState(onOpenFile = onOpenFile, modifier = contentModifier)
             is ViewerUiState.Loading -> LoadingState(contentModifier)
             is ViewerUiState.Error -> ErrorState(state.message, onOpenFile, contentModifier)
             is ViewerUiState.Content -> state.renderer.Render(state.file, contentModifier)
         }
     }
-}
 
-@Composable
-private fun LoadingState(modifier: Modifier) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CircularProgressIndicator()
-        Text(
-            text = "Opening file…",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 16.dp),
+    if (showDetails && content != null) {
+        FileDetailsDialog(file = content.file, format = subtitle, onDismiss = { showDetails = false })
+    }
+    if (showThemeDialog) {
+        ThemeChooserDialog(
+            current = themeMode,
+            onSelect = { onThemeModeChange(it); showThemeDialog = false },
+            onDismiss = { showThemeDialog = false },
         )
     }
 }
 
+/** Shows the detected MIME type, extension, and human-readable size. */
 @Composable
-private fun ErrorState(message: String, onOpenFile: () -> Unit, modifier: Modifier) {
-    Column(
-        modifier = modifier.padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.ErrorOutline,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-        )
+private fun FileDetailsDialog(
+    file: LoadedFile,
+    format: String?,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = { Text("File details") },
+        text = {
+            Column {
+                DetailRow("Name", file.displayName)
+                format?.let { DetailRow("Format", it) }
+                DetailRow("Type", file.mimeType ?: "unknown")
+                DetailRow("Extension", if (file.extension.isBlank()) "none" else ".${file.extension}")
+                DetailRow("Size", formatSize(file.sizeBytes))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
-            text = "Couldn't open this file",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp),
         )
-        androidx.compose.material3.TextButton(
-            onClick = onOpenFile,
-            modifier = Modifier.padding(top = 12.dp),
-        ) {
-            Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
-            Text("Try another file", modifier = Modifier.padding(start = 8.dp))
-        }
+        Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+/** System / Light / Dark chooser persisted by the caller. */
+@Composable
+private fun ThemeChooserDialog(
+    current: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        title = { Text("Theme") },
+        text = {
+            Column {
+                ThemeMode.entries.forEach { mode ->
+                    val selected = mode == current
+                    Row(
+                        label = mode.label(),
+                        selected = selected,
+                        onClick = { onSelect(mode) },
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun Row(label: String, selected: Boolean, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(min = 200.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 12.dp),
+        )
+    }
+}
+
+private fun ThemeMode.label(): String = when (this) {
+    ThemeMode.SYSTEM -> "System default"
+    ThemeMode.LIGHT -> "Light"
+    ThemeMode.DARK -> "Dark"
+}
+
+/** Human-readable byte size (e.g. "1.2 MB"). */
+private fun formatSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return String.format("%.1f KB", kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return String.format("%.1f MB", mb)
+    val gb = mb / 1024.0
+    return String.format("%.1f GB", gb)
 }

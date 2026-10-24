@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,6 +19,7 @@ import com.offlineviewer.app.render.logic.JsonFormatter
 import com.offlineviewer.app.render.logic.SyntaxHighlighter
 import com.offlineviewer.app.render.logic.XmlFormatter
 import com.offlineviewer.app.render.logic.YamlValidator
+import com.offlineviewer.app.ui.theme.LocalThemeIsDark
 
 /**
  * Renders JSON / XML / YAML. Each is pretty-printed / validated by its pure
@@ -44,42 +46,45 @@ class StructuredDataRenderer : FileRenderer {
             return
         }
 
-        val result = remember(file) { prepare(file, source) }
+        val dark = LocalThemeIsDark.current
+        val result = remember(file, dark) { prepare(file, source, dark) }
 
         Column(modifier = modifier.fillMaxSize()) {
             result.notice?.let { FallbackNotice(message = it) }
-            Text(
-                text = result.annotated,
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(rememberScrollState())
-                    .padding(16.dp),
-            )
+            SelectionContainer {
+                Text(
+                    text = result.annotated,
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                )
+            }
         }
     }
 
     private data class Prepared(val annotated: AnnotatedString, val notice: String?)
 
-    private fun prepare(file: LoadedFile, source: String): Prepared {
+    private fun prepare(file: LoadedFile, source: String, dark: Boolean): Prepared {
         return when (kindOf(file)) {
             Kind.JSON -> when (val r = JsonFormatter.format(source)) {
                 is JsonFormatter.Result.Formatted ->
-                    Prepared(SyntaxHighlighter.highlightJson(r.text), null)
+                    Prepared(SyntaxHighlighter.highlightJson(r.text, dark), null)
                 is JsonFormatter.Result.Invalid ->
                     Prepared(AnnotatedString(source), "Could not parse as JSON (${r.reason}). Showing raw text.")
             }
             Kind.XML -> when (val r = XmlFormatter.format(source)) {
                 is XmlFormatter.Result.Formatted ->
-                    Prepared(SyntaxHighlighter.highlightXml(r.text), null)
+                    Prepared(SyntaxHighlighter.highlightXml(r.text, dark), null)
                 is XmlFormatter.Result.Invalid ->
                     Prepared(AnnotatedString(source), "Could not parse as XML (${r.reason}). Showing raw text.")
             }
             Kind.YAML -> when (val r = YamlValidator.validate(source)) {
                 is YamlValidator.Result.Valid ->
-                    Prepared(SyntaxHighlighter.highlightYaml(source), null)
+                    Prepared(SyntaxHighlighter.highlightYaml(source, dark), null)
                 is YamlValidator.Result.Invalid ->
                     Prepared(AnnotatedString(source), "Could not parse as YAML (${r.reason}). Showing raw text.")
             }

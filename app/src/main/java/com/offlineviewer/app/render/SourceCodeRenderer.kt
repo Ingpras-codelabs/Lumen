@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.offlineviewer.app.render.logic.CodeLanguage
 import com.offlineviewer.app.render.logic.SyntaxHighlighter
+import com.offlineviewer.app.ui.theme.LocalThemeIsDark
 
 /**
  * Renders source code with lightweight regex syntax highlighting selected by
@@ -41,26 +43,29 @@ class SourceCodeRenderer : FileRenderer {
             return
         }
 
+        val dark = LocalThemeIsDark.current
         val language = remember(file) { CodeLanguage.fromExtension(file.extension) }
-        val annotated: AnnotatedString = remember(file) {
+        val annotated: AnnotatedString = remember(file, dark) {
             try {
-                SyntaxHighlighter.highlightCode(source, language)
+                SyntaxHighlighter.highlightCode(source, language, dark)
             } catch (e: Throwable) {
                 AnnotatedString(source)
             }
         }
 
         Column(modifier = modifier.fillMaxSize()) {
-            Text(
-                text = annotated,
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .horizontalScroll(rememberScrollState())
-                    .padding(16.dp),
-            )
+            SelectionContainer {
+                Text(
+                    text = annotated,
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .horizontalScroll(rememberScrollState())
+                        .padding(16.dp),
+                )
+            }
         }
     }
 }

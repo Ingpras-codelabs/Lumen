@@ -9,6 +9,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
+import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,9 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.offlineviewer.app.data.FileLoader
+import com.offlineviewer.app.data.ThemePreferences
 import com.offlineviewer.app.ui.ViewerScreen
 import com.offlineviewer.app.ui.ViewerViewModel
 import com.offlineviewer.app.ui.theme.AppTheme
@@ -31,12 +35,25 @@ import com.offlineviewer.app.ui.theme.AppTheme
  */
 class MainActivity : ComponentActivity() {
 
+    private lateinit var themePreferences: ThemePreferences
+
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Smooth cold start via the AndroidX SplashScreen compat library.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
+        themePreferences = ThemePreferences(this)
         enableEdgeToEdge()
         setContent {
-            AppTheme {
-                ViewerApp(initialUri = extractUri(intent))
+            val themeMode by themePreferences.themeMode.collectAsStateWithLifecycle()
+            AppTheme(themeMode = themeMode) {
+                val windowSizeClass = calculateWindowSizeClass(this)
+                ViewerApp(
+                    initialUri = extractUri(intent),
+                    windowSizeClass = windowSizeClass,
+                    themeMode = themeMode,
+                    onThemeModeChange = themePreferences::setThemeMode,
+                )
             }
         }
     }
@@ -50,8 +67,14 @@ class MainActivity : ComponentActivity() {
     /** Uri delivered via onNewIntent while the activity is already running. */
     private var pendingUri: Uri? by mutableStateOf(null)
 
+    @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     @Composable
-    private fun ViewerApp(initialUri: Uri?) {
+    private fun ViewerApp(
+        initialUri: Uri?,
+        windowSizeClass: androidx.compose.material3.windowsizeclass.WindowSizeClass,
+        themeMode: com.offlineviewer.app.ui.theme.ThemeMode,
+        onThemeModeChange: (com.offlineviewer.app.ui.theme.ThemeMode) -> Unit,
+    ) {
         val context = LocalContext.current
         val viewModel: ViewerViewModel = viewModel()
         val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,6 +104,10 @@ class MainActivity : ComponentActivity() {
         ViewerScreen(
             state = state,
             onOpenFile = { openLauncher.launch(OPEN_MIME_FILTER) },
+            windowSizeClass = windowSizeClass,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+            onShare = { shareCurrentFile(viewModel.currentUri) },
             modifier = Modifier,
         )
     }
@@ -88,6 +115,24 @@ class MainActivity : ComponentActivity() {
     private fun takePersistableReadPermission(uri: Uri) {
         runCatching {
             contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    /**
+     * Shares the currently-open file via the system share sheet. Fully local:
+     * the Uri is a content:// reference already granted to this app; no network
+     * access is involved.
+     */
+    private fun shareCurrentFile(uri: Uri?) {
+        if (uri == null) return
+        runCatching {
+            val mime = contentResolver.getType(uri) ?: "*/*"
+            val share = Intent(Intent.ACTION_SEND).apply {
+                type = mime
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(share, getString(R.string.share_file)))
         }
     }
 

@@ -1,5 +1,6 @@
 # Gradle / build outputs
 .gradle/
+.kotlin/
 build/
 *.apk
 *.aab
