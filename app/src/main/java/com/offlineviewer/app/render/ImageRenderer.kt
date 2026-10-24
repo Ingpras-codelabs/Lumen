@@ -103,16 +103,56 @@ class ImageRenderer : FileRenderer {
         const val MIN_SCALE = 0.5f
         const val MAX_SCALE = 10f
         const val DOUBLE_TAP_SCALE = 2.5f
+
+        /**
+         * Target maximum decoded dimension. Images larger than this on either
+         * axis are downsampled (power-of-two [BitmapFactory.Options.inSampleSize])
+         * so a large file near the 32 MB load cap decodes to a bitmap that fits
+         * comfortably in memory on low-RAM devices while still filling a typical
+         * viewport when zoomed. 2048px keeps a full-screen image crisp.
+         */
+        const val TARGET_MAX_DIMENSION = 2048
     }
 
+    /**
+     * Decodes the image with a bounds-first pass so large images downsample
+     * instead of OOMing. First reads only the dimensions
+     * ([BitmapFactory.Options.inJustDecodeBounds]) to compute an
+     * [BitmapFactory.Options.inSampleSize] against [TARGET_MAX_DIMENSION], then
+     * decodes at that reduced resolution. The [Throwable] catch (covering
+     * [OutOfMemoryError]) remains as a final safety net so a pathological image
+     * degrades to an error state rather than crashing.
+     */
     private fun decode(file: LoadedFile): Bitmap? = try {
         val bytes = file.bytes ?: file.text?.toByteArray(Charsets.ISO_8859_1)
         if (bytes == null) {
             null
         } else {
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = computeInSampleSize(bounds.outWidth, bounds.outHeight, TARGET_MAX_DIMENSION)
+            }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, decodeOptions)
         }
     } catch (e: Throwable) {
         null
     }
+}
+
+/**
+ * Returns a power-of-two sample size (the standard Android downsampling value)
+ * that brings both decoded dimensions close to [targetMax] without dropping
+ * below it: it is the largest power of two such that halving again would put a
+ * dimension under [targetMax]. Returns 1 (no downsampling) when the bounds pass
+ * could not read valid dimensions or the image already fits within [targetMax].
+ */
+internal fun computeInSampleSize(width: Int, height: Int, targetMax: Int): Int {
+    if (width <= 0 || height <= 0 || targetMax <= 0) return 1
+    var sampleSize = 1
+    while (width / (sampleSize * 2) >= targetMax || height / (sampleSize * 2) >= targetMax) {
+        sampleSize *= 2
+    }
+    return sampleSize
 }
