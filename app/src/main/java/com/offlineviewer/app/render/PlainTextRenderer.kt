@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.offlineviewer.app.render.logic.HexDump
 
 /**
  * The universal fallback renderer. It handles [text/plain] and the common
@@ -18,8 +19,9 @@ import androidx.compose.ui.unit.dp
  * last-resort renderer for ANY file so nothing ever fails to display.
  *
  * Decoded text is shown verbatim in a scrollable monospace block. When the
- * file was loaded as raw bytes (no text payload), a short descriptor is shown
- * instead of attempting to decode binary data.
+ * file was loaded as raw bytes (no text payload), a classic hex + ASCII preview
+ * is shown in the same monospace container instead of attempting to decode the
+ * binary data, so even unknown formats open with something meaningful.
  */
 class PlainTextRenderer : FileRenderer {
 
@@ -31,7 +33,7 @@ class PlainTextRenderer : FileRenderer {
 
     @Composable
     override fun Render(file: LoadedFile, modifier: Modifier) {
-        val body = file.text ?: binaryDescriptor(file)
+        val body = file.text ?: binaryPreview(file)
         SelectionContainer(modifier = modifier) {
             Text(
                 text = body,
@@ -45,13 +47,13 @@ class PlainTextRenderer : FileRenderer {
         }
     }
 
-    private fun binaryDescriptor(file: LoadedFile): String {
-        val size = file.bytes?.size ?: file.sizeBytes
-        return buildString {
-            append("Binary content (")
-            append(size)
-            append(" bytes)\n")
-            append("This file type cannot be shown as text.")
+    private fun binaryPreview(file: LoadedFile): String {
+        val bytes = file.bytes
+        val size = bytes?.size?.toLong() ?: file.sizeBytes
+        val header = "${file.displayName} ($size bytes)\n\n"
+        if (bytes == null || bytes.isEmpty()) {
+            return header + "No content to preview."
         }
+        return header + HexDump.format(bytes)
     }
 }
