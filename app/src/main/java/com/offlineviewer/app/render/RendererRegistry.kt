@@ -65,6 +65,9 @@ class RendererRegistry(
                     HtmlRenderer(),
                     RtfRenderer(),
                     EpubRenderer(),
+                    DocxRenderer(),           // Word OOXML (content extraction)
+                    XlsxRenderer(),           // Excel OOXML (content extraction)
+                    PptxRenderer(),           // PowerPoint OOXML (content extraction)
                     SourceCodeRenderer(),
                     ImageRenderer(),          // webp/bmp/gif/ico/png/jpeg
                     plainText,                // text/plain + explicit text extensions

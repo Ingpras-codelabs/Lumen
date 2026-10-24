@@ -93,6 +93,26 @@ class RendererRegistryTest {
         assertTrue(reg.fallback is PlainTextRenderer)
     }
 
+    @Test
+    fun resolvesOfficeOoxmlFormatsByMimeAndExtension() {
+        val reg = RendererRegistry.createDefault()
+
+        val docxMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        val xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        val pptxMime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+        assertTrue(reg.resolve(docxMime, null) is DocxRenderer)
+        assertTrue(reg.resolve(null, "docx") is DocxRenderer)
+        assertTrue(reg.resolve(xlsxMime, null) is XlsxRenderer)
+        assertTrue(reg.resolve(null, "xlsx") is XlsxRenderer)
+        assertTrue(reg.resolve(pptxMime, null) is PptxRenderer)
+        assertTrue(reg.resolve(null, "pptx") is PptxRenderer)
+
+        assertEquals("Word document", reg.resolve(docxMime, null).formatName)
+        assertEquals("Spreadsheet", reg.resolve(xlsxMime, null).formatName)
+        assertEquals("Presentation", reg.resolve(pptxMime, null).formatName)
+    }
+
     /**
      * Locks the documented invariant (see [RendererRegistry.createDefault]):
      * because SVG is an image type, [SvgRenderer] MUST resolve ahead of the

@@ -28,6 +28,21 @@ object SupportedFormats {
         Format("Rich Text (RTF)", listOf("rtf"), listOf("application/rtf", "text/rtf")),
         Format("EPUB e-book", listOf("epub"), listOf("application/epub+zip")),
         Format(
+            "Word document",
+            listOf("docx"),
+            listOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        ),
+        Format(
+            "Spreadsheet",
+            listOf("xlsx"),
+            listOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        ),
+        Format(
+            "Presentation",
+            listOf("pptx"),
+            listOf("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+        ),
+        Format(
             "Image",
             listOf("webp", "bmp", "gif", "ico", "png", "jpg", "jpeg"),
             listOf("image/webp", "image/bmp", "image/gif", "image/x-icon", "image/vnd.microsoft.icon", "image/png", "image/jpeg"),
